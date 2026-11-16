@@ -44,7 +44,6 @@ const snapshotSchema: z.ZodType<PullRequestSnapshot> = z.object({
   }),
   error: z.string().optional(),
 });
-const emptyInput = { type: "object", properties: {}, additionalProperties: false } as const;
 const activitySchema = z.object({
   id: z.string(),
   pullRequestId: z.string(),
@@ -64,8 +63,8 @@ export type PullRequestActivityEvent = {
 export const PullRequests = Rpc.define({
   id: "opencode-pr-assistant",
   methods: {
-    snapshot: { input: emptyInput, output: snapshotSchema },
-    refresh: { input: emptyInput, output: snapshotSchema },
+    snapshot: { input: z.undefined(), output: snapshotSchema },
+    refresh: { input: z.undefined(), output: snapshotSchema },
     markSeen: {
       input: { type: "object", properties: { id: { type: "string" } }, required: ["id"], additionalProperties: false },
       output: snapshotSchema,

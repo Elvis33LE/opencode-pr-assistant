@@ -7,13 +7,15 @@ import type { PullRequest, PullRequestSnapshot } from "./shared/types";
 import type { Context } from "@opencode/plugin/gui";
 import { exactTime, groupPullRequests, handoffPrompt, relativeTime, statusOf } from "./ui/presentation";
 import dashboardStyle from "./ui/dashboard.css?inline";
+import { errorMessage } from "./ui/errors";
 
 type PullRequestActivityEvent = { id: string; pullRequestId: string; timestamp: string; author: string; bodyExcerpt: string };
+type RPCEvent<T> = { type: string; location: unknown; data: T };
 type DashboardRPC = {
   snapshot(): Promise<PullRequestSnapshot>;
   refresh(): Promise<PullRequestSnapshot>;
   markSeen(input: { id: string }): Promise<PullRequestSnapshot>;
-  events: { on(name: "activity", listener: (event: PullRequestActivityEvent) => void): () => void };
+  events: { on(name: "activity", listener: (event: RPCEvent<PullRequestActivityEvent>) => void): () => void };
 };
 type ViewPreferences = { readonly expandedRepos: readonly string[]; readonly expandedPRs: readonly string[] };
 type MutableViewPreferences = { expandedRepos: string[]; expandedPRs: string[] };
@@ -66,7 +68,7 @@ function Dashboard(props: {
     snapshot(): Promise<PullRequestSnapshot>;
     refresh(): Promise<PullRequestSnapshot>;
     markSeen(input: { id: string }): Promise<PullRequestSnapshot>;
-    events: { on(name: "activity", listener: (event: PullRequestActivityEvent) => void): () => void };
+    events: { on(name: "activity", listener: (event: RPCEvent<PullRequestActivityEvent>) => void): () => void };
   };
   sessionID: () => string;
   serverID: () => string;
@@ -94,8 +96,9 @@ function Dashboard(props: {
         setLoadError(undefined);
       }
     } catch (error) {
-      if (alive) setLoadError(String(error));
-      if (alive) setSnapshot(current => current ? { ...current, stale: true, error: String(error) } : undefined);
+      const message = errorMessage(error);
+      if (alive) setLoadError(message);
+      if (alive) setSnapshot(current => current ? { ...current, stale: true, error: message } : undefined);
     } finally {
       if (alive) setBusy(false);
     }
@@ -157,7 +160,7 @@ function Dashboard(props: {
     ctx.tabs.open({ server, id: origin.sessionID }, { focus: true });
   };
 
-  const onActivity = (event: PullRequestActivityEvent) => {
+  const onActivity = ({ data: event }: RPCEvent<PullRequestActivityEvent>) => {
     const pr = snapshot()?.pullRequests.find(item => item.id === event.pullRequestId);
     const title = pr ? `${pr.owner}/${pr.repository}#${pr.number}` : event.pullRequestId;
     ctx.toast.show({

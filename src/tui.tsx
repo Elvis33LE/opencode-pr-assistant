@@ -1,16 +1,18 @@
 /** @jsxImportSource @opentui/solid */
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, on, untrack } from "solid-js";
 import { Plugin } from "@opencode/plugin/tui";
 import { PullRequests } from "opencode-pr-assistant/rpc";
 import type { PullRequest, PullRequestSnapshot } from "./shared/types";
 import { exactTime, groupPullRequests, handoffPrompt, relativeTime, statusOf } from "./ui/presentation";
+import { errorMessage } from "./ui/errors";
 
 type PullRequestActivityEvent = { id: string; pullRequestId: string; timestamp: string; author: string; bodyExcerpt: string };
+type RPCEvent<T> = { type: string; location: unknown; data: T };
 type RPC = {
   snapshot(): Promise<PullRequestSnapshot>;
   refresh(): Promise<PullRequestSnapshot>;
   markSeen(input: { id: string }): Promise<PullRequestSnapshot>;
-  events: { on(name: "activity", listener: (event: PullRequestActivityEvent) => void): () => void };
+  events: { on(name: "activity", listener: (event: RPCEvent<PullRequestActivityEvent>) => void): () => void };
 };
 type ViewPreferences = { expandedRepos: string[]; expandedPRs: string[] };
 type TUIViewPreferences = {
@@ -26,7 +28,7 @@ export default Plugin.define({
       initial: { expandedRepos: [], expandedPRs: [] },
     });
     const [activityRevision, setActivityRevision] = createSignal(0);
-    const stopActivity = rpc.events.on("activity", (event: PullRequestActivityEvent) => {
+    const stopActivity = rpc.events.on("activity", ({ data: event }: RPCEvent<PullRequestActivityEvent>) => {
       void rpc.snapshot().then(snapshot => {
         latestSnapshot = snapshot;
         setActivityRevision(value => value + 1);
@@ -96,13 +98,14 @@ function PullRequestSidebar(props: {
       props.onSnapshot(next);
       setSelected(index => Math.min(index, Math.max(rows().length - 1, 0)));
     } catch (error) {
-      setLoadError(String(error));
-      setSnapshot(current => current ? { ...current, stale: true, error: String(error) } : undefined);
+      const message = errorMessage(error);
+      setLoadError(message);
+      setSnapshot(current => current ? { ...current, stale: true, error: message } : undefined);
     } finally {
       setBusy(false);
     }
   };
-  createEffect(() => { props.activityRevision(); void load(); });
+  createEffect(on(props.activityRevision, () => { void untrack(() => load()); }));
   const refreshTimer = setInterval(() => { void load(); }, 120_000);
   onCleanup(() => clearInterval(refreshTimer));
 
