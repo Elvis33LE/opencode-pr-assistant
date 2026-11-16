@@ -114,7 +114,7 @@ export class PullRequestService {
 }
 
 export const defaultGh: GhRunner = async args => {
-  const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe" });
+  const proc = Bun.spawn(["gh", ...args], { windowsHide: true, stdout: "pipe", stderr: "pipe" });
   const [out, err, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
   if (code !== 0) throw new Error(err.trim() || `gh exited with code ${code}`);
   return out;
