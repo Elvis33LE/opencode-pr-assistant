@@ -1,0 +1,35 @@
+{
+  "name": "opencode-pr-assistant",
+  "version": "0.1.0",
+  "description": "Read-only account-wide GitHub pull request dashboard for OpenCode",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./rpc": "./src/rpc.ts",
+    "./tui": "./src/tui.tsx",
+    "./gui-experimental": "./dist/gui-experimental.cjs"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "bun run build:server && vite build",
+    "build:server": "tsup",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@opencode/plugin": "2.3.0",
+    "zod": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@opentui/solid": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@opentui/solid": "^0.1.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.6",
+    "vite-plugin-solid": "^2.11.0",
+    "solid-js": "^1.9.0"
+  }
+}
